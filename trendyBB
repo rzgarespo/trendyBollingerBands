@@ -1,12 +1,12 @@
-//6 MA sources with adaptive trading bands - Rzgar Espo
-//TradingView Pine Script
+//7 MA sources with adaptive trading bands - Rzgar Espo
+//C#3|2m 84 )011 qu7_j )4!<|7 PineCoders
 //@version=5
 
-indicator(title="BB with Trend Bars", shorttitle="BB_Trend", timeframe="", timeframe_gaps=true,  overlay=true)
+indicator(title="Trendy Bollinger Bands", shorttitle="Trendy BB", timeframe="", timeframe_gaps=true,  overlay=true)
 
-bbOn = input.bool(false, title='Show StdDev Bands', inline='BB', group='BB Settings')
+bbOn = input.bool(true, title='Hide or Show StdDev Bands', inline='BB', group='BB Settings')
 source = input(close, title="Source", group='BB Settings')
-maLength = input.int(27, title="MA value", minval=1, maxval = 500, group='BB Settings')
+maLength = input.int(57, title="MA value", minval=1, maxval = 500, group='BB Settings')
 mult = input.float(2.0, title="StdDev", minval=0.001, maxval=50, group='BB Settings', tooltip="or 2.5 for catching the extreme")
 offset = input.int(0, title="Offset", minval = -50, maxval = 50)
 string maType = input.string("SMA", "MA type", options = ["EMA", "LSMA", "MVWAP", "SMA", "SMMA", "VWMA", "WMA"])
@@ -38,8 +38,8 @@ lower5 = basis - dev*4.236/2
 ///BB Base Plot & Bar Colors///
 barUpBasis() => source >= basis
 barDownBasis() => source  < basis
-basisColor = source  >= basis ? color.lime : source  < basis ? color.red : color.yellow
-barcolor(barUpBasis() ? color.lime: barDownBasis() ? color.red : na, title="Show MA Bar Colors?")
+basisColor = source  >= basis ? color.rgb(73, 153, 129) : source  < basis ? color.rgb(230, 51, 67) : color.yellow
+barcolor(barUpBasis() ? color.rgb(73, 153, 129): barDownBasis() ? color.rgb(230, 51, 67) : na, title="Show MA Bar Colors?")
 
 ///BB StDev Plots///
 //lineWidth = input.int(2, title='Line Width', minval=1, maxval=3, inline='BB MA', group='BB Settings')
@@ -54,8 +54,17 @@ p7 = plot(bbOn ? upper4 : na, title="Upper 3.6", color=color.red, offset = offse
 p8 = plot(bbOn ? lower4 : na, title="Lower 3.6", color=color.red, offset = offset)
 p9 = plot(bbOn ? upper5 : na, title="Upper 4.2", color=color.purple, display=display.none, offset = offset)
 p10 = plot(bbOn ? lower5 : na, title="Lower 4.2", color=color.purple, display=display.none, offset = offset)
+fill(p9, p10, color=color.rgb(33, 150, 243, 95), display=display.none, title="BB fill")
 
-fill(p9, p10, color=color.rgb(33, 150, 243, 95), title="Fill color", display=display.none)
+///Ichimoku Cloud///
+cloudOn = input.bool(true, title='Hide or Show Cloud', inline='cloud', group='Ichimaku')
+donchian(len) => math.avg(ta.lowest(len), ta.highest(len))
+upperCloud = math.avg(donchian(9), donchian(26))
+lowerCloud = donchian(52)
+
+plotUpperCloud = plot(cloudOn ? upperCloud: na, offset = 26 - 1, color=#0df115, display=display.none, title="Cloud upper plot")
+plotLowerCloud = plot(cloudOn ? lowerCloud: na, offset = 26 - 1, color=#f10808, display=display.none, title="Cloud lower plot")
+fill(plotUpperCloud, plotLowerCloud, color = upperCloud > lowerCloud ? color.rgb(52, 194, 170, 84) : color.rgb(233, 36, 118, 84), title="Cloud fill")
 
 ///Fast & Slow MA///
 maFS = input.bool(false, title='', inline="fsMA", group='MA Settings', tooltip="Show fast and slow MA")
@@ -67,9 +76,9 @@ plot(maFS and maType == 'EMA' ? ta.ema(source, maF) : maFS and maType == 'LSMA' 
 plot(maFS and maType == 'EMA' ? ta.ema(source, maS) : maFS and maType == 'LSMA' ? ta.linreg(source, maS, offset) : maFS and maType == 'SMA' ? ta.sma(source, maS) : maFS and maType == 'MVWAP' ? ta.ema(ta.vwap, maS) : maFS and maType == 'SMMA' ? ta.rma(source, maS) : maFS and maType == 'VWMA' ? ta.vwma(source, maS) :  maFS and maType == 'WMA' ? ta.wma(source, maS) :na, title='Slow MA', color=color.new(color.red, 0), offset = offset)
     
 ///ATR Trailing Stop/// 
-atrOn = input.bool(false, '', inline='atr', group='ATR Settings', tooltip="Slow ATR 10 - 3 (mostly reliable on slow time frames 4H,8H,1D ect...) or Fast ATR 5 - 0.5")
-atrLength = input.int(10, 'Length', inline='atr', group='ATR Settings')
-atrMult = input.float(3, 'Multiplier', inline='atr', group='ATR Settings')
+atrOn = input.bool(true, title='ATR', inline='atr', group='ATR Settings', tooltip="Slow ATR 10 - 3 (mostly reliable on slow time frames 4H,8H,1D ect...) or Fast ATR 5 - 0.5")
+atrLength = input.int(10, title='Length', inline='atr', group='ATR Settings')
+atrMult = input.float(3, title='Multiplier', inline='atr', group='ATR Settings')
 
 ///Calculations
 atrSL = atrMult * ta.atr(atrLength)
@@ -84,5 +93,5 @@ Long = ta.crossover(source, atrTrailing)
 Short = ta.crossunder(source, atrTrailing)
 
 plot(atrOn ? atrTrailing[1] : na, color=trailingColor, title='ATR Trailing Stop', linewidth=2)
-plotshape(atrOn ? Long : na, 'Long', shape.labelup, location.belowbar, color = color.green, text='Long', textcolor=color.new(color.white, 0))
-plotshape(atrOn ? Short : na, 'Short', shape.labeldown, location.abovebar, color = color.red, text='Short', textcolor=color.new(color.white, 0))
+plotshape(atrOn ? Long : na, 'Long', shape.labelup, location.belowbar, color = color.green, text='Long', textcolor=color.white)
+plotshape(atrOn ? Short : na, 'Short', shape.labeldown, location.abovebar, color = color.red, text='Short', textcolor=color.white)
