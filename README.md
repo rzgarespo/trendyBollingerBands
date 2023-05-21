@@ -6,7 +6,7 @@
 ## Indicator Overview
 
 The "BB with Trend Bars" indicator is designed to display Bollinger Bands (BB) with trend bars on the chart. It also includes features such as fast and slow moving averages (MA) and an ATR (Average True Range) trailing stop.
-
+[Recommended oscillator](https://github.com/rzgarespo/Ultimate-Godmode-Oscillator/tree/main)
 ## Indicator Parameters
 
 The indicator provides the following customizable parameters:
