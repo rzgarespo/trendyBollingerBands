@@ -1,0 +1,88 @@
+//6 MA sources with adaptive trading bands - Rzgar Espo
+//TradingView Pine Script
+//@version=5
+
+indicator(title="BB with Trend Bars", shorttitle="BB_Trend", timeframe="", timeframe_gaps=true,  overlay=true)
+
+bbOn = input.bool(false, title='Show StdDev Bands', inline='BB', group='BB Settings')
+source = input(close, title="Source", group='BB Settings')
+maLength = input.int(27, title="MA value", minval=1, maxval = 500, group='BB Settings')
+mult = input.float(2.0, title="StdDev", minval=0.001, maxval=50, group='BB Settings', tooltip="or 2.5 for catching the extreme")
+offset = input.int(0, title="Offset", minval = -50, maxval = 50)
+string maType = input.string("SMA", "MA type", options = ["EMA", "LSMA", "MVWAP", "SMA", "SMMA", "VWMA", "WMA"])
+float maBasis = switch maType
+	"EMA" => ta.ema(source, maLength)
+	"LSMA" => ta.linreg(source, maLength, offset)
+	"MVWAP" => ta.ema(ta.vwap, maLength)
+	"SMA" => ta.sma(source, maLength)
+	"SMMA" => ta.rma(source, maLength)
+	"VWMA" => ta.vwma(source, maLength)
+	"WMA" => ta.wma(source, maLength)
+	///Default option
+	=> ta.sma(source, maLength)
+
+basis = maBasis
+dev = mult * ta.stdev(source, maLength)
+
+upper1 = (basis + dev/2)
+lower1 = (basis - dev/2)
+upper2 = basis + dev*1.618/2
+lower2 = basis - dev*1.618/2
+upper3 = basis + dev*2.618/2
+lower3 = basis - dev*2.618/2
+upper4 = basis + dev*3.618/2
+lower4 = basis - dev*3.618/2
+upper5 = basis + dev*4.236/2
+lower5 = basis - dev*4.236/2
+
+///BB Base Plot & Bar Colors///
+barUpBasis() => source >= basis
+barDownBasis() => source  < basis
+basisColor = source  >= basis ? color.lime : source  < basis ? color.red : color.yellow
+barcolor(barUpBasis() ? color.lime: barDownBasis() ? color.red : na, title="Show MA Bar Colors?")
+
+///BB StDev Plots///
+//lineWidth = input.int(2, title='Line Width', minval=1, maxval=3, inline='BB MA', group='BB Settings')
+p0 = plot(basis, title="BB Base Plot", color=basisColor, linewidth=2, style=plot.style_circles, offset = offset)
+p1 = plot(bbOn ? upper1 : na, title="Upper Base", color=color.gray, offset = offset)
+p2 = plot(bbOn ? lower1 : na, title="Lower Base", color=color.gray, offset = offset)
+p3 = plot(bbOn ? upper2 : na, title="Upper 1.6", color=color.aqua, offset = offset)
+p4 = plot(bbOn ? lower2 : na, title="Lower 1.6", color=color.aqua, offset = offset)
+p5 = plot(bbOn ? upper3 : na, title="Upper 2.6", color=color.orange, offset = offset)
+p6 = plot(bbOn ? lower3 : na, title="Lower 2.6", color=color.orange, offset = offset)
+p7 = plot(bbOn ? upper4 : na, title="Upper 3.6", color=color.red, offset = offset)
+p8 = plot(bbOn ? lower4 : na, title="Lower 3.6", color=color.red, offset = offset)
+p9 = plot(bbOn ? upper5 : na, title="Upper 4.2", color=color.purple, display=display.none, offset = offset)
+p10 = plot(bbOn ? lower5 : na, title="Lower 4.2", color=color.purple, display=display.none, offset = offset)
+
+fill(p9, p10, color=color.rgb(33, 150, 243, 95), title="Fill color", display=display.none)
+
+///Fast & Slow MA///
+maFS = input.bool(false, title='', inline="fsMA", group='MA Settings', tooltip="Show fast and slow MA")
+//string choice = input.string(defval='SMA', title="MA type", options=['EMA', 'LSMA', 'MVWAP' 'SMA', 'SMMA', 'VWMA', 'WMA'], group='MA Settings') //for now listen to BB MA
+maF = input.int(9, title='Fast MA', minval=1, maxval=500, inline='fsMA', group='MA Settings')
+maS = input.int(111, title='Slow MA', minval=1, maxval=500, inline='fsMA', group='MA Settings')
+
+plot(maFS and maType == 'EMA' ? ta.ema(source, maF) : maFS and maType == 'LSMA' ? ta.linreg(source, maF, offset) : maFS and maType == 'SMA' ? ta.sma(source, maF) : maFS and maType == 'MVWAP' ? ta.ema(ta.vwap, maF) : maFS and maType == 'SMMA' ? ta.rma(source, maF) : maFS and maType == 'VWMA' ? ta.vwma(source, maF) :  maFS and maType == 'WMA' ? ta.wma(source, maF) :na, title='Fast MA', color=color.new(color.green, 0), offset = offset)
+plot(maFS and maType == 'EMA' ? ta.ema(source, maS) : maFS and maType == 'LSMA' ? ta.linreg(source, maS, offset) : maFS and maType == 'SMA' ? ta.sma(source, maS) : maFS and maType == 'MVWAP' ? ta.ema(ta.vwap, maS) : maFS and maType == 'SMMA' ? ta.rma(source, maS) : maFS and maType == 'VWMA' ? ta.vwma(source, maS) :  maFS and maType == 'WMA' ? ta.wma(source, maS) :na, title='Slow MA', color=color.new(color.red, 0), offset = offset)
+    
+///ATR Trailing Stop/// 
+atrOn = input.bool(false, '', inline='atr', group='ATR Settings', tooltip="Slow ATR 10 - 3 (mostly reliable on slow time frames 4H,8H,1D ect...) or Fast ATR 5 - 0.5")
+atrLength = input.int(10, 'Length', inline='atr', group='ATR Settings')
+atrMult = input.float(3, 'Multiplier', inline='atr', group='ATR Settings')
+
+///Calculations
+atrSL = atrMult * ta.atr(atrLength)
+atrTrailing = 0.0
+conditionA = source > nz(atrTrailing[1], 0) ? source - atrSL : source + atrSL
+conditionB = source < nz(atrTrailing[1], 0) and source[1] < nz(atrTrailing[1], 0) ? math.min(nz(atrTrailing[1], 0), source + atrSL) : conditionA
+atrTrailing := source > nz(atrTrailing[1], 0) and source[1] > nz(atrTrailing[1], 0) ? math.max(nz(atrTrailing[1], 0), source - atrSL) : conditionB
+trailingColor = source < atrTrailing[1] ? color.rgb(255, 0, 0, 0) : color.rgb(0, 255, 0, 0)
+
+///Buy/Long & Sell/Short 
+Long = ta.crossover(source, atrTrailing)
+Short = ta.crossunder(source, atrTrailing)
+
+plot(atrOn ? atrTrailing[1] : na, color=trailingColor, title='ATR Trailing Stop', linewidth=2)
+plotshape(atrOn ? Long : na, 'Long', shape.labelup, location.belowbar, color = color.green, text='Long', textcolor=color.new(color.white, 0))
+plotshape(atrOn ? Short : na, 'Short', shape.labeldown, location.abovebar, color = color.red, text='Short', textcolor=color.new(color.white, 0))
